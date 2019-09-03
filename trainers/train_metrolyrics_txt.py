@@ -23,6 +23,9 @@ parser.add_argument('--min_word_len', type=str, default='5')
 parser.add_argument('--max_word_len', type=str, default='25')
 parser.add_argument('--max_label_len', type=str, default='28') 
 parser.add_argument('--max_seq_len', type=str, default='60')
+parser.add_argument('--n_lines', type=str, default='2')
+parser.add_argument('--phoneme_drop_prob', type=str, default='0')
+parser.add_argument('--phoneme_swap_prob', type=str, default='0')
 
 args = parser.parse_args()
 
@@ -37,6 +40,11 @@ loss_type = args.loss_type
 
 min_word_len = int(args.min_word_len)
 max_word_len = int(args.max_word_len)
+
+# the number of lyric lines to take per sample (default 2)
+n_lines = int(args.n_lines) 
+phoneme_drop_prob = float(args.phoneme_drop_prob)
+phoneme_swap_prob = float(args.phoneme_swap_prob)
 
 HID_DIM = lstm_size 
 ENC_DROPOUT = dropout
@@ -68,34 +76,6 @@ def get_libri_speech_audio_file_from_phoneme_file(audio_file):
 train_phoneme_files = [get_libri_speech_phoneme_file_from_audio_file(f) for f in train_wavs]
 test_phoneme_files = [get_libri_speech_phoneme_file_from_audio_file(f) for f in test_wavs]
 
-# Then we'll need to remove any files from the data whose total length is less than the minimum subsampling length
-# And also filter any missing or incorrect file paths
-"""
-bad_train_indices = []
-bad_test_indices = []
-
-print("Loading data...")
-
-for i in tqdm(range(len(train_wavs))):
-    if not (os.path.exists(train_wavs[i]) and os.path.exists(train_phoneme_files[i]) ):
-        bad_train_indices.append(i)
-    elif (len(label_fn(train_phoneme_files[i])) - 2 <= min_phoneme_len): # don't count START and END in length measurements
-        bad_train_indices.append(i)
-
-for i in tqdm(range(len(test_wavs))):
-    if not (os.path.exists(test_wavs[i]) and os.path.exists(test_phoneme_files[i]) ):
-        bad_test_indices.append(i)
-    elif (len(label_fn(test_phoneme_files[i])) - 2 <= min_phoneme_len): # don't count START and END in length measurements
-        bad_test_indices.append(i)
-
-train_wavs = [f for i, f in enumerate(train_wavs) if i not in bad_train_indices]
-train_phoneme_files = [f for i, f in enumerate(train_phoneme_files) if i not in bad_train_indices]
-
-test_wavs = [f for i, f in enumerate(test_wavs) if i not in bad_test_indices]
-test_phoneme_files = [f for i, f in enumerate(test_phoneme_files) if i not in bad_test_indices]
-"""
-# FOR LIBRISPEECH
-        
 glove = text_utils.glove2dict("/data/jrgillick/word-vectors/glove.6B.100d.txt")
 
 d = dataset_utils.read_cmu_pronunciation_dict('/data/jrgillick/librispeech/LibriSpeech/english.dict')
@@ -107,15 +87,8 @@ input_vocab = text_utils.make_vocab(
     standard_special_symbols=True
 )
 
-# FOR LIBRISPEECH
-train_tg_files = [f.replace('.phn','.TextGrid') for f in train_phoneme_files if os.path.exists(f.replace('.phn','.TextGrid'))]
-test_tg_files = [f.replace('.phn','.TextGrid') for f in test_phoneme_files if os.path.exists(f.replace('.phn','.TextGrid'))]
-
-train_tg_files = [f for f in tqdm(train_tg_files) if len(dataset_utils.get_words_from_textgrid_file(f))> min_word_len]
-test_tg_files = [f for f in tqdm(test_tg_files) if len(dataset_utils.get_words_from_textgrid_file(f))> min_word_len]
-
-word_output_vocab = text_utils.make_vocab(filepaths=train_tg_files+test_tg_files,
-                token_fn=dataset_utils.get_words_from_textgrid_file,
+word_output_vocab = text_utils.make_vocab(filepaths=['/data/jrgillick/metrolyrics/vocabs/words.txt'],
+                token_fn=lambda f: list(text_utils.glove2dict(f).keys()),
                 include_pad_symbol=True, include_start_symbol=True,
                 include_end_symbol=True, include_oov_symbol=True,
                 standard_special_symbols=True)
@@ -124,9 +97,10 @@ reverse_word_output_vocab = text_utils.make_reverse_vocab(word_output_vocab)
 
 output_embedding_matrix = text_utils.make_embedding_matrix(glove, word_output_vocab, 100)
 
-word_to_phoneme_subsampling_args = {'min_len':min_word_len,
-                                    'max_len':max_word_len,
-                                    'n_samples':1,
+word_to_phoneme_subsampling_args = {'n_samples':1,
+                                    'n_lines':n_lines,
+                                    'phoneme_drop_prob': phoneme_drop_prob,
+                                    'phoneme_swap_prob': phoneme_swap_prob,
                                     'phoneme_dict': d,
                                     'phoneme_vocab': input_vocab}
 

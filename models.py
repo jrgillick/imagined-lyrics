@@ -1,4 +1,4 @@
-import sys, random, copy, numpy as np
+import sys, random, copy, numpy as np, librosa
 sys.path.append('/home/jrgillick/projects/audio-feature-learning/')
 import audio_utils, dataset_utils, data_loaders, file_utils, torch_utils, text_utils
 import torch
@@ -238,7 +238,7 @@ class Seq2Seq(nn.Module):
 
 ############ PREDICTION METHODS ############
 
-def predict(model, input_file, label_file=None):
+def predict(model, input_file, label_file=None, reverse_output_vocab=None):
 	if label_file is None:
 		tmp_dataset = data_loaders.AudioDataset([input_file],
 			feature_fn=audio_utils.featurize_mfcc, **subsampling_kwargs)
@@ -268,7 +268,7 @@ def predict(model, input_file, label_file=None):
 	# Convert to readable labels with reverse vocab
 	return output_seq, text_utils.readable_outputs(output_seq, reverse_output_vocab)
 
-def predict_subsampling(model, input_file, label_file, teacher_forcing_ratio=0.7):
+def predict_subsampling(model, input_file, label_file, reverse_output_vocab=None):
 	#input_feats = np.array([featurize_chars(input_file, output_vocab)])
 
 	tmp_dataset = data_loaders.AudioDataset([input_file],
@@ -300,8 +300,18 @@ def predict_subsampling(model, input_file, label_file, teacher_forcing_ratio=0.7
 		output_seq, reverse_output_vocab), text_utils.readable_outputs(
 		np.array(labs[0]), reverse_output_vocab)
 
+def dedup_list(l):
+	l = copy.deepcopy(l)
+	i = 1
+	while i < len(l):
+		if l[i] == l[i-1]:
+			del l[i]
+		else:
+			i += 1
+	return l
+
 def predict_windows(model, input_file, hop_length=1., window_length=1.,
-	sr=16000, offset=0, duration=None, dedup=True):
+	sr=16000, offset=0, duration=None, dedup=True, reverse_output_vocab=None):
 
 	# windows of the form (start, duration)
 	def _get_time_windows(total_length, hop_length,
@@ -316,16 +326,6 @@ def predict_windows(model, input_file, hop_length=1., window_length=1.,
 			windows.append((start, window_length))
 			start += hop_length
 		return windows
-
-	def _dedup_list(l):
-		l = copy.deepcopy(l)
-		i = 1
-		while i < len(l):
-			if l[i] == l[i-1]:
-				del l[i]
-			else:
-				i += 1
-		return l
 
 	# First get a list of times to do the windowing over the file
 	file_length = librosa.core.get_duration(filename=input_file)
@@ -342,7 +342,7 @@ def predict_windows(model, input_file, hop_length=1., window_length=1.,
 	# Run model forward
 	with torch.no_grad():
 		src = torch.from_numpy(np.array(seqs)).float().permute((1,0,2))#.to(device)
-		encodings = enc(src)
+		encodings = model.encoder(src)
 		output = model(src) # No labels given
 
 	# get arxmax from one hot, and convert to numpy
@@ -355,7 +355,7 @@ def predict_windows(model, input_file, hop_length=1., window_length=1.,
 		readable_seq = list(filter(lambda e: e not in [text_utils.START_SYMBOL, text_utils.END_SYMBOL], readable_seq) )
 		readable_seq = ['pause' if x is text_utils.OOV_SYMBOL else x for x in readable_seq]
 		if dedup:
-			readable_seqs.append(_dedup_list(readable_seq))
+			readable_seqs.append(dedup_list(readable_seq))
 		else:
 			readable_seqs.append(readable_seq)
 	return output_seqs, readable_seqs
