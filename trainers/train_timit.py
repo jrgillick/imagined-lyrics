@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser = argparse.ArgumentParser()
 parser.add_argument('--checkpoint_dir', type=str)
 parser.add_argument('--teacher_forcing_ratio', type=str, default='0.3')
-parser.add_argument('--lstm_size', type=str, default='256')
+parser.add_argument('--lstm_size', type=str, default='128')
 parser.add_argument('--batch_size', type=str, default='32')
 parser.add_argument('--dropout', type=str, default='0.7')
 parser.add_argument('--loss_type', type=str, default='x_ent') # 'ctc' or 'x_ent'
@@ -107,7 +107,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 enc = Encoder(INPUT_DIM, HID_DIM, ENC_DROPOUT)
 dec = Decoder(OUTPUT_DIM, HID_DIM, DEC_DROPOUT, device)
 
-model = Seq2Seq(enc, dec, device, max_label_len ).to(device)
+model = Seq2Seq(enc, dec, device, max_label_len).to(device)
 
 torch_utils.count_parameters(model)
 model.apply(torch_utils.init_weights)
