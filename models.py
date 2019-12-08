@@ -1,5 +1,5 @@
-import sys, random, copy, numpy as np, librosa
-sys.path.append('/home/jrgillick/projects/audio-feature-learning/')
+import sys, random, copy, numpy as np, librosa, itertools
+sys.path.append('../utils')
 import audio_utils, dataset_utils, data_loaders, file_utils, torch_utils, text_utils
 import torch
 from torch import nn
@@ -7,6 +7,28 @@ from torch import optim
 import torch.nn.functional as F
 from torch.distributions.categorical import Categorical
 
+class Encoder(nn.Module):
+	def __init__(self, input_dim, hid_dim, dropout):
+		super().__init__()
+
+		self.input_dim = input_dim
+		self.hid_dim = hid_dim
+
+		#self.dropout = nn.Dropout(dropout)
+		self.rnn = nn.GRU(input_dim, hid_dim, num_layers=2, dropout=dropout)
+
+	def forward(self, src):
+		#src = [src sent len, batch size, input_dim]
+		#src = self.dropout(src)
+
+		outputs, hidden = self.rnn(src) #no cell state
+
+		# outputs dim: [src sent len, batch size, hid dim * n directions]
+		# hidden dim: [n layers * n directions, batch size, hid dim]
+
+		#outputs are always from the top hidden layer
+		return hidden
+    
 class Encoder(nn.Module):
 	def __init__(self, input_dim, hid_dim, dropout):
 		super().__init__()
@@ -311,7 +333,8 @@ def dedup_list(l):
 	return l
 
 def predict_windows(model, input_file, hop_length=1., window_length=1.,
-	sr=16000, offset=0, duration=None, dedup=True, reverse_output_vocab=None):
+	sr=16000, offset=0, duration=None, dedup=True, reverse_output_vocab=None,
+			num_versions=1):
 
 	# windows of the form (start, duration)
 	def _get_time_windows(total_length, hop_length,
@@ -339,10 +362,14 @@ def predict_windows(model, input_file, hop_length=1., window_length=1.,
 	padded_seqs = audio_utils.keras_pad_seqs(seqs, maxlen=100, dtype='float32',
 		padding='pre', truncating='post', value=0)
 
+	num_windows = len(windows)
+	# repeat the inputs to get multiple versions
+	padded_seqs = np.repeat(padded_seqs, num_versions, axis=0)
+    
 	# Run model forward
 	with torch.no_grad():
-		src = torch.from_numpy(np.array(seqs)).float().permute((1,0,2))#.to(device)
-		encodings = model.encoder(src)
+		src = torch.from_numpy(np.array(padded_seqs)).float().permute((1,0,2)).to(model.device)
+		#encodings = model.encoder(src)
 		output = model(src) # No labels given
 
 	# get arxmax from one hot, and convert to numpy
@@ -358,4 +385,8 @@ def predict_windows(model, input_file, hop_length=1., window_length=1.,
 			readable_seqs.append(dedup_list(readable_seq))
 		else:
 			readable_seqs.append(readable_seq)
-	return output_seqs, readable_seqs
+
+	variations = [list(a) for a in np.split(np.array(readable_seqs), num_versions)]
+	 # combine windows
+	variations = [[w for w in itertools.chain.from_iterable(v)] for v in variations]
+	return variations #output_seqs, readable_seqs

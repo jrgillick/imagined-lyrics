@@ -1,4 +1,5 @@
-#python make_libris_peech_phoneme_files_from_dictionary.py /data/jrgillick/librispeech/LibriSpeech/english.dict /data/jrgillick/librispeech/LibriSpeech/train-clean-100
+# Example command
+#python make_libri_speech_phoneme_files_from_dictionary.py ../data/librispeech/english.dict ../data/librispeech/LibriSpeech/train-clean-100
 
 import os, sys, librosa
 from tqdm import tqdm

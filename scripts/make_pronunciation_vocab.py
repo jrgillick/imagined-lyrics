@@ -1,4 +1,5 @@
-#python make_pronunciation_vocab.py /data/jrgillick/librispeech/LibriSpeech/english.dict /home/jrgillick/projects/phoneme/libri_speech_phonemes.vocab
+# Example command:
+# python make_pronunciation_vocab.py ../data/librispeech/english.dict ../data/librispeech/libri_speech_phonemes.vocab
 
 import os, sys, librosa
 from tqdm import tqdm

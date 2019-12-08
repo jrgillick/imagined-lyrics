@@ -1,0 +1,21 @@
+-To get metrolyrics data:
+First download the csv from here: https://www.kaggle.com/gyani95/380000-lyrics-from-metrolyrics
+Unzip and save the csv file at ./data/metrolyrics/lyrics.csv
+
+-If you want to use your own lyrics dataset, you can download the profanity filtering data here:
+To get the list of profane words to filter:
+`wget https://github.com/zacanger/profane-words/archive/master.zip`
+`unzip master.zip`
+`rm master.zip`
+`mv profane-words-master data/profane-words`
+
+-To download librispeech data:
+`wget http://www.openslr.org/resources/12/train-clean-100.tar.gz`
+Unzip and move to data/librispeech/LibriSpeech/train-clean-100
+
+`wget http://www.openslr.org/resources/12/dev-clean.tar.gz`
+Unzip and move to data/librispeech/LibriSpeech/dev-clean
+
+-Download librispeech alignments from https://github.com/CorentinJ/librispeech-alignments
+
+-Download 100d GloVe vectors from: http://nlp.stanford.edu/data/glove.6B.zip

@@ -1,8 +1,14 @@
-import audio_utils
+import sys
+sys.path.append('../utils/')
+sys.path.append('../')
+import dataset_utils, json
 
-ml_tokens = audio_utils.load_all_metrolyrics_words('/data/jrgillick/metrolyrics/lyrics.csv')
+profane_words_path = '../data/profane-words/words.json'
+with open(profane_words_path) as f:
+    profane_words = json.load(f)
+
+ml_tokens = dataset_utils.load_all_metrolyrics_words('../data/metrolyrics/lyrics.csv', banned_words = profane_words)
 big_str = ' '.join(ml_tokens)
-with open('/data/jrgillick/metrolyrics/texts/words.txt', 'w') as f:
+with open('../data/metrolyrics/texts/words.txt', 'w') as f:
     f.write(big_str.lower())
 
-#python get_vocab_counts.py --glove_dir=/data/jrgillick/projects/long_text/GloVe/ --input_files_dir=/data/jrgillick/metrolyrics/texts/ --output_files_dir=/data/jrgillick/metrolyrics/vocabs/ --min_count=24

@@ -1,5 +1,5 @@
 import sys, os, random, time, math, copy, librosa, torch, numpy as np, argparse
-sys.path.append('/home/jrgillick/projects/audio-feature-learning/')
+sys.path.append('../data/utils/')
 sys.path.append('../')
 from models import *
 import audio_utils, dataset_utils, data_loaders, file_utils, torch_utils, text_utils
@@ -24,8 +24,8 @@ parser.add_argument('--max_word_len', type=str, default='25')
 parser.add_argument('--max_label_len', type=str, default='28') 
 parser.add_argument('--max_seq_len', type=str, default='60')
 parser.add_argument('--n_lines', type=str, default='2')
-parser.add_argument('--phoneme_drop_prob', type=str, default='0')
-parser.add_argument('--phoneme_swap_prob', type=str, default='0')
+parser.add_argument('--phoneme_drop_prob', type=str, default='0.1')
+parser.add_argument('--phoneme_swap_prob', type=str, default='0.1')
 
 args = parser.parse_args()
 
@@ -177,9 +177,7 @@ def text_log(checkpoint_dir):
             f.write(str(line)+"\n")
     model.set_device(device)
 
-epochs = 10
-
-for i in range(epochs):
+while model.global_step < 200000:
     torch_utils.run_training_loop(n_epochs=1, model=model, device=device, loss_type=loss_type, checkpoint_dir=checkpoint_dir, 
         optimizer=optimizer, iterator=training_generator, teacher_forcing_ratio=teacher_forcing_ratio, val_iterator=test_generator,
         gradient_clip=1., verbose=True)

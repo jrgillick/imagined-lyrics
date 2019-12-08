@@ -1,5 +1,5 @@
 import sys, os, random, time, math, copy, librosa, torch, numpy as np, argparse
-sys.path.append('/home/jrgillick/projects/audio-feature-learning/')
+sys.path.append('../data/utils/')
 sys.path.append('../')
 from models import *
 import audio_utils, dataset_utils, data_loaders, file_utils, torch_utils, text_utils
@@ -19,7 +19,7 @@ parser.add_argument('--teacher_forcing_ratio', type=str, default='0.3')
 parser.add_argument('--lstm_size', type=str, default='128')
 parser.add_argument('--batch_size', type=str, default='16')
 parser.add_argument('--dropout', type=str, default='0.7')
-parser.add_argument('--loss_type', type=str, default='x_ent') # 'ctc' or 'x_ent'
+parser.add_argument('--loss_type', type=str, default='ctc') # 'ctc' or 'x_ent'
 parser.add_argument('--min_phoneme_len', type=str, default='5')
 parser.add_argument('--max_phoneme_len', type=str, default='10')
 parser.add_argument('--max_label_len', type=str, default='13') # should be ~max_phoneme_len + 3
@@ -122,7 +122,7 @@ test_dataset = data_loaders.AudioDataset(test_wavs,
 
 collate_fn=partial(audio_utils.pad_sequences_with_labels,
                     sequence_pad_value=0, label_pad_value=text_utils.PAD_SYMBOL, 
-                    max_seq_len=60,max_label_len=max_label_len,
+                    max_seq_len=max_seq_len,max_label_len=max_label_len,
                     output_vocab=output_vocab, one_hot_labels=False)
 
 training_generator = torch.utils.data.DataLoader(
@@ -184,9 +184,8 @@ def text_log(checkpoint_dir):
             f.write(str(line)+"\n")
     model.set_device(device)
 
-epochs = 10
 
-for i in range(epochs):
+while model.global_step < 200000:
     torch_utils.run_training_loop(n_epochs=1, model=model, device=device, loss_type=loss_type, checkpoint_dir=checkpoint_dir, 
         optimizer=optimizer, iterator=training_generator, teacher_forcing_ratio=teacher_forcing_ratio, val_iterator=test_generator,
         gradient_clip=1., verbose=True)
