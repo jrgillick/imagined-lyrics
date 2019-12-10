@@ -106,7 +106,7 @@ def load_checkpoint(checkpoint, model, optimizer=None):
 		raise ("File doesn't exist {}".format(checkpoint))
 	else:
 		print("Loading checkpoint at:", checkpoint)
-	checkpoint = torch.load(checkpoint)
+	checkpoint = torch.load(checkpoint, map_location=torch.device('cpu'))
 	model.load_state_dict(checkpoint['state_dict'])
 
 	if optimizer:
@@ -117,7 +117,7 @@ def load_checkpoint(checkpoint, model, optimizer=None):
 
 	if 'global_step' in checkpoint:
 		model.global_step = checkpoint['global_step'] + 1
-		print("Resuming training at step: ", model.global_step)
+		print("Loading checkpoint at step: ", model.global_step)
 
 	if 'best_val_loss' in checkpoint:
 		model.best_val_loss = checkpoint['best_val_loss']
